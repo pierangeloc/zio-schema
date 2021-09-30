@@ -136,13 +136,13 @@ object ProtobufCodec extends Codec {
     def encode[A](fieldNumber: Option[Int], schema: Schema[A], value: A): Chunk[Byte] =
       (schema, value) match {
         case (Schema.GenericRecord(structure), v: Map[String, _]) => encodeRecord(fieldNumber, structure, v)
-        case (Schema.Sequence(element, _, g), v)                  => encodeSequence(fieldNumber, element, g(v))
+        case (Schema.Sequence(element, _, g), v)                  => encodeSequence(fieldNumber, element, g.asInstanceOf[Any => Chunk[Nothing]](v))
         case (Schema.Enumeration(structure), v: (String, _))      => encodeEnumeration(fieldNumber, structure, v)
         case (Schema.Transform(codec, _, g), _)                   => g(value).map(encode(fieldNumber, codec, _)).getOrElse(Chunk.empty)
         case (Schema.Primitive(standardType), v)                  => encodePrimitive(fieldNumber, standardType, v)
         case (Schema.Tuple(left, right), v @ (_, _))              => encodeTuple(fieldNumber, left, right, v)
-        case (Schema.Optional(codec), v: Option[_])               => encodeOptional(fieldNumber, codec, v)
-        case (Schema.EitherSchema(left, right), v: Either[_, _])  => encodeEither(fieldNumber, left, right, v)
+        case (Schema.Optional(codec), v: Option[_])               => encodeOptional(fieldNumber, codec.asInstanceOf[Schema[Any]], v)
+        case (Schema.EitherSchema(left, right), v: Either[_, _])  => encodeEither(fieldNumber, left.asInstanceOf[Schema[Any]], right.asInstanceOf[Schema[Any]], v)
         case (lzy @ Schema.Lazy(_), v)                            => encode(fieldNumber, lzy.schema, v)
         case (Schema.Meta(ast), _)                                => encode(fieldNumber, Schema[SchemaAst], ast)
         case ProductEncoder(encode)                               => encode(fieldNumber)
